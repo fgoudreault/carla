@@ -690,6 +690,7 @@ PATCHELF_REPO=https://github.com/NixOS/patchelf/archive/${PATCHELF_VERSION}.tar.
 
 PATCHELF_TAR=${PATCHELF_VERSION}.tar.gz
 PATCHELF_SOURCE_DIR=patchelf-src
+# PATCHELF_BUILD_DIR=patchelf-build
 PATCHELF_INSTALL_DIR=patchelf-install
 
 PATCHELF_INCLUDE_DIR=${PWD}/${PATCHELF_INSTALL_DIR}/include
@@ -706,10 +707,17 @@ else
   mv patchelf-${PATCHELF_VERSION} ${PATCHELF_SOURCE_DIR}
 
   mkdir ${PATCHELF_INSTALL_DIR}
+  # mkdir ${PATCHELF_BUILD_DIR}
 
   pushd ${PATCHELF_SOURCE_DIR} >/dev/null
 
+  # ${PWD}/../${PATCHELF_SOURCE_DIR}/bootstrap.sh
   ./bootstrap.sh
+
+  # popd >/dev/null
+
+  # pushd ${PATCHELF_BUILD_DIR} >/dev/null
+  # ../${PATCHELF_SOURCE_DIR}/configure --prefix=${PWD}/../${PATCHELF_INSTALL_DIR}
   ./configure --prefix=${PWD}/../${PATCHELF_INSTALL_DIR}
   make
   make install
