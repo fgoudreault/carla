@@ -122,9 +122,12 @@ void ARayCastSemanticLidar::SimulateLidar(const float DeltaTime)
             * idxPtsOneLaser, Description.HorizontalFov) - Description.HorizontalFov / 2;
         const bool PreprocessResult = RayPreprocessCondition[idxChannel][idxPtsOneLaser];
 
-        if (PreprocessResult && ShootLaser(VertAngle, HorizAngle, HitResult, TraceParams)) {
-          WritePointAsync(idxChannel, HitResult);
-        }
+        // if (PreprocessResult && ShootLaser(VertAngle, HorizAngle, HitResult, TraceParams)) {
+        //  WritePointAsync(idxChannel, HitResult);
+        //}
+        //
+        // always write pt
+        WritePointAsync(idxChannel, HitResult);
       };
     });
   }
@@ -182,28 +185,39 @@ void ARayCastSemanticLidar::ComputeAndSaveDetections(const FTransform& SensorTra
 
 void ARayCastSemanticLidar::ComputeRawDetection(const FHitResult& HitInfo, const FTransform& SensorTransf, FSemanticDetection& Detection) const
 {
-    const FVector HitPoint = HitInfo.ImpactPoint;
-    Detection.point = SensorTransf.Inverse().TransformPosition(HitPoint);
+  if (HitInfo.bBlockingHit) {
+      // something was actually hit
+      const FVector HitPoint = HitInfo.ImpactPoint;
+      Detection.point = SensorTransf.Inverse().TransformPosition(HitPoint);
 
-    const FVector VecInc = - (HitPoint - SensorTransf.GetLocation()).GetSafeNormal();
-    Detection.cos_inc_angle = FVector::DotProduct(VecInc, HitInfo.ImpactNormal);
+      const FVector VecInc = - (HitPoint - SensorTransf.GetLocation()).GetSafeNormal();
+      Detection.cos_inc_angle = FVector::DotProduct(VecInc, HitInfo.ImpactNormal);
 
-    const FActorRegistry &Registry = GetEpisode().GetActorRegistry();
+      const FActorRegistry &Registry = GetEpisode().GetActorRegistry();
 
-    const AActor* actor = HitInfo.Actor.Get();
-    Detection.object_idx = 0;
-    Detection.object_tag = static_cast<uint32_t>(HitInfo.Component->CustomDepthStencilValue);
+      const AActor* actor = HitInfo.Actor.Get();
+      Detection.object_idx = 0;
+      Detection.object_tag = static_cast<uint32_t>(HitInfo.Component->CustomDepthStencilValue);
 
-    if (actor != nullptr) {
+      if (actor != nullptr) {
 
-      const FCarlaActor* view = Registry.FindCarlaActor(actor);
-      if(view)
-        Detection.object_idx = view->GetActorId();
+        const FCarlaActor* view = Registry.FindCarlaActor(actor);
+        if(view)
+          Detection.object_idx = view->GetActorId();
 
-    }
-    else {
-      UE_LOG(LogCarla, Warning, TEXT("Actor not valid %p!!!!"), actor);
-    }
+      }
+      else {
+        UE_LOG(LogCarla, Warning, TEXT("Actor not valid %p!!!!"), actor);
+      }
+  }
+  else {
+      // nothing was hit within range
+      // set everything to 0
+      const FVector HitPoint = FVector(0.0);
+      Detection.point = HitPoint;
+      Detection.cos_inc_angle = 0.0;
+      Detection.object_idx = 0;
+  }
 }
 
 
