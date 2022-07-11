@@ -325,11 +325,11 @@ for PACKAGE_NAME in "${PACKAGES[@]}" ; do if [[ ${PACKAGE_NAME} != "Carla" ]] ; 
     rm -Rf "./CarlaUE4/Content/${PACKAGE_NAME}/Maps/${PROPS_MAP_NAME}"
     rm -f "./CarlaUE4/AssetRegistry.bin"
 
-    if ${SINGLE_PACKAGE} ; then
-      tar -rf ${DESTINATION} *
-    else
-      tar -czf ${DESTINATION}.gz *
-    fi
+    # if ${SINGLE_PACKAGE} ; then
+    #   tar -rf ${DESTINATION} *
+    # else
+    #   tar -czf ${DESTINATION}.gz *
+    # fi
 
     popd >/dev/null
 

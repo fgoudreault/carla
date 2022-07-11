@@ -127,6 +127,7 @@ void ARayCastSemanticLidar::SimulateLidar(const float DeltaTime)
         //}
         //
         // always write pt
+	ShootLaser(VertAngle, HorizAngle, HitResult, TraceParams);
         WritePointAsync(idxChannel, HitResult);
       };
     });
@@ -215,8 +216,9 @@ void ARayCastSemanticLidar::ComputeRawDetection(const FHitResult& HitInfo, const
       // set everything to 0
       const FVector HitPoint = FVector(0.0);
       Detection.point = HitPoint;
-      Detection.cos_inc_angle = 0.0;
+      Detection.cos_inc_angle = 2.0;  // actually impossible haha (might be easier to parse afterwards)
       Detection.object_idx = 0;
+      Detection.object_tag = 0;
   }
 }
 
@@ -248,11 +250,20 @@ bool ARayCastSemanticLidar::ShootLaser(const float VerticalAngle, const float Ho
     TraceParams,
     FCollisionResponseParams::DefaultResponseParam
   );
-
-  if (HitInfo.bBlockingHit) {
-    HitResult = HitInfo;
-    return true;
-  } else {
-    return false;
+  HitResult = HitInfo;
+  if (HitResult.bBlockingHit) {
+  	// set hit point to angles instead of cartesian coordinates of impact
+	// (spherical coordinates here)
+    HitResult.ImpactPoint.Set(VerticalAngle, HorizontalAngle, 0.0);
   }
+  else {
+    HitResult.ImpactPoint.Set(VerticalAngle, HorizontalAngle, HitResult.Distance);
+  }
+  return true;
+  // if (HitInfo.bBlockingHit) {
+  //   HitResult = HitInfo;
+  //   return true;
+  // } else {
+  //   return false;
+  // }
 }
