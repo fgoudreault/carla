@@ -120,7 +120,7 @@ void ARayCastSemanticLidar::SimulateLidar(const float DeltaTime)
         const float VertAngle = LaserAngles[idxChannel];
         const float HorizAngle = std::fmod(CurrentHorizontalAngle + AngleDistanceOfLaserMeasure
             * idxPtsOneLaser, Description.HorizontalFov) - Description.HorizontalFov / 2;
-        const bool PreprocessResult = RayPreprocessCondition[idxChannel][idxPtsOneLaser];
+        // const bool PreprocessResult = RayPreprocessCondition[idxChannel][idxPtsOneLaser];
 
         // if (PreprocessResult && ShootLaser(VertAngle, HorizAngle, HitResult, TraceParams)) {
         //  WritePointAsync(idxChannel, HitResult);
@@ -186,10 +186,15 @@ void ARayCastSemanticLidar::ComputeAndSaveDetections(const FTransform& SensorTra
 
 void ARayCastSemanticLidar::ComputeRawDetection(const FHitResult& HitInfo, const FTransform& SensorTransf, FSemanticDetection& Detection) const
 {
+  // always keep angles
+  Detection.point = FVector(HitInfo.TraceEnd.X, HitInfo.TraceEnd.Y, HitInfo.TraceEnd.Z);
   if (HitInfo.bBlockingHit) {
+      // now that lidar returns hit angles and distances
+      // do not modify the inpact point...
       // something was actually hit
       const FVector HitPoint = HitInfo.ImpactPoint;
-      Detection.point = SensorTransf.Inverse().TransformPosition(HitPoint);
+      // Detection.point = SensorTransf.Inverse().TransformPosition(HitPoint);
+      // use angles instead of detection point in cartesian coordinates
 
       const FVector VecInc = - (HitPoint - SensorTransf.GetLocation()).GetSafeNormal();
       Detection.cos_inc_angle = FVector::DotProduct(VecInc, HitInfo.ImpactNormal);
@@ -213,9 +218,7 @@ void ARayCastSemanticLidar::ComputeRawDetection(const FHitResult& HitInfo, const
   }
   else {
       // nothing was hit within range
-      // set everything to 0
-      const FVector HitPoint = FVector(0.0);
-      Detection.point = HitPoint;
+      // set everything to but keep angles
       Detection.cos_inc_angle = 2.0;  // actually impossible haha (might be easier to parse afterwards)
       Detection.object_idx = 0;
       Detection.object_tag = 0;
@@ -251,13 +254,18 @@ bool ARayCastSemanticLidar::ShootLaser(const float VerticalAngle, const float Ho
     FCollisionResponseParams::DefaultResponseParam
   );
   HitResult = HitInfo;
+  // use TraceEnd to store angles in the end
   if (HitResult.bBlockingHit) {
-  	// set hit point to angles instead of cartesian coordinates of impact
-	// (spherical coordinates here)
-    HitResult.ImpactPoint.Set(VerticalAngle, HorizontalAngle, 0.0);
+    // set hit point to angles instead of cartesian coordinates of impact
+    // (spherical coordinates here)
+    // HitResult.ImpactPoint.Set(VerticalAngle, HorizontalAngle, 0.0);
+    // a hit was registered => store distance as well
+    HitResult.TraceEnd.Set(VerticalAngle, HorizontalAngle, HitResult.Distance);
   }
   else {
-    HitResult.ImpactPoint.Set(VerticalAngle, HorizontalAngle, HitResult.Distance);
+    // No hit => set distance to 0
+    HitResult.TraceEnd.Set(VerticalAngle, HorizontalAngle, 0.0);
+    // HitResult.ImpactPoint.Set(VerticalAngle, HorizontalAngle, HitResult.Distance);
   }
   return true;
   // if (HitInfo.bBlockingHit) {
