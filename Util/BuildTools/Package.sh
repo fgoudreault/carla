@@ -189,10 +189,10 @@ if ${DO_CARLA_RELEASE} && ${DO_TARBALL} ; then
 
   rm -f ./Manifest_NonUFSFiles_Linux.txt
   rm -f ./Manifest_UFSFiles_Linux.txt
-  rm -Rf ./CarlaUE4/Saved
-  rm -Rf ./Engine/Saved
+  # rm -Rf ./CarlaUE4/Saved
+  # rm -Rf ./Engine/Saved
 
-  tar -czf ${DESTINATION} *
+  # tar -czf ${DESTINATION} *
 
   popd >/dev/null
 
@@ -346,9 +346,9 @@ for PACKAGE_NAME in "${PACKAGES[@]}" ; do if [[ ${PACKAGE_NAME} != "Carla" ]] ; 
 fi ; done
 
 # compress the TAR if it is a single package
-if ${SINGLE_PACKAGE} ; then
-  gzip -f ${DESTINATION}
-fi
+# if ${SINGLE_PACKAGE} ; then
+#   gzip -f ${DESTINATION}
+# fi
 
 # ==============================================================================
 # -- Log paths of generated packages -------------------------------------------
