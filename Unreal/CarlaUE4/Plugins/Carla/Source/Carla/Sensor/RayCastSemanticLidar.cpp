@@ -204,65 +204,71 @@ void ARayCastSemanticLidar::ComputeRawDetection(const FHitResult& HitInfo, const
       // const AActor* actor = HitInfo.Actor.Get();
       Detection.object_idx = 0;
       Detection.object_tag = static_cast<uint32_t>(HitInfo.Component->CustomDepthStencilValue);
-      auto * comp = HitInfo.GetComponent();
+      // make sure we have a UStaticMeshComponent
+      UStaticMeshComponent * comp = Cast<UStaticMeshComponent>(HitInfo.GetComponent());
       if (comp == nullptr){
 	UE_LOG(LogCarla, Fatal, TEXT("Component is NULL"));
       }
-      else{
-        UE_LOG(LogCarla, Warning, TEXT("Component is %s"), *comp->GetName());
-      }
+      UE_LOG(LogCarla, Warning, TEXT(" "));
+      UE_LOG(LogCarla, Warning, TEXT("Component is %s"), *comp->GetName());
+      // GET UV COORDINATES
+      FVector2D uv_coords;
+      // int32 uv_channel;
+
       int32 sectionIndex;
       int32 faceIndex = HitInfo.FaceIndex;
-      UE_LOG(LogCarla, Warning, TEXT("FaceIndex = %d"), faceIndex);
+      // UE_LOG(LogCarla, Warning, TEXT("FaceIndex = %d"), faceIndex);
       if (faceIndex == -1){
 	      UE_LOG(LogCarla, Fatal, TEXT("FaceIndex == -1"));
       }
       UMaterialInterface * matInt = comp->GetMaterialFromCollisionFaceIndex(faceIndex, sectionIndex);
-      UE_LOG(LogCarla, Warning, TEXT("Section Index = %d"), sectionIndex);
+      // UE_LOG(LogCarla, Warning, TEXT("Section Index = %d"), sectionIndex);
       if (matInt == nullptr){
 	UE_LOG(LogCarla, Fatal, TEXT("Material Interface is NULL"));
       }
-      // UE_LOG(LogCarla, Warning, TEXT("Material Interface = %s"), *matInt->GetName());
-      // FLightmassMaterialInterfaceSettings * lightmassSettings = &(matInt->LightmassSettings);
-      // float diffuseBoost = matInt->GetDiffuseBoost();
-      // UE_LOG(LogCarla, Warning, TEXT("diffuse boost = %d"), diffuseBoost);
-      // float emissiveBoost = matInt->GetEmissiveBoost();
-      // UE_LOG(LogCarla, Warning, TEXT("emissive boost = %d"), emissiveBoost);
-
-      // UMaterial * material = matInt->GetMaterial();
-      // if (material == nullptr){
-      //  UE_LOG(LogCarla, Fatal, TEXT("Material is NULL"));
-      //    }
       UMaterialInstance * materialInstance = Cast<UMaterialInstance>(matInt);
       if (materialInstance == nullptr){
 	      UE_LOG(LogCarla, Fatal, TEXT("MaterialInstance is NULL"));
       }
       UE_LOG(LogCarla, Warning, TEXT("material Instance = %s"), *materialInstance->GetName());
+      auto parameterValues = materialInstance->TextureParameterValues;
+      FTextureParameterValue * difuse = &(parameterValues[0]);
+      auto * difuseTex = difuse->ParameterValue;
+      // UE_LOG(LogCarla, Warning, TEXT("Difuse info = %s"), *difuse->ParameterInfo.ToString());
+      // UE_LOG(LogCarla, Warning, TEXT("Difuse texture class = %s"), *difuseTex->GetClass()->GetName());
+      FTextureParameterValue * normal = &(parameterValues[1]);
+      auto * normalTex = normal->ParameterValue;
+      // UE_LOG(LogCarla, Warning, TEXT("Normal info = %s"), *normal->ParameterInfo.ToString());
+      // UE_LOG(LogCarla, Warning, TEXT("Normal texture class = %s"), *normalTex->GetClass()->GetName());
+      FTextureParameterValue * ormh = &(parameterValues[2]);
+      auto * ormhTex = ormh->ParameterValue;
+      // UE_LOG(LogCarla, Warning, TEXT("ORMH info = %s"), *ormh->ParameterInfo.ToString());
+      // UE_LOG(LogCarla, Warning, TEXT("ORMH texture class = %s"), *ormhTex->GetClass()->GetName());
       // auto * params = &(materialInstance->ScalarParameterValues);
-      UE_LOG(LogCarla, Warning, TEXT("Num scalar parameters = %d"), materialInstance->ScalarParameterValues.Num());
-      for (const FScalarParameterValue & Parameter : materialInstance->ScalarParameterValues){
-      	      float value = Parameter.ParameterValue;
-      	      UE_LOG(LogCarla, Warning, TEXT("Param value = %d"), value);
-      	      UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString())
-      }
-      UE_LOG(LogCarla, Warning, TEXT("Num vector parameters = %d"), materialInstance->VectorParameterValues.Num());
-      for (const FVectorParameterValue & Parameter : materialInstance->VectorParameterValues){
-      	      FLinearColor value = Parameter.ParameterValue;
-      	      UE_LOG(LogCarla, Warning, TEXT("Param value (R, G, B, A) = %s"), *value.ToString());
-              UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString())
-       }
-      UE_LOG(LogCarla, Warning, TEXT("Num texture parameters = %d"), materialInstance->TextureParameterValues.Num());
-      for (const FTextureParameterValue & Parameter : materialInstance->TextureParameterValues){
-	      UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString());
-       }
-      UE_LOG(LogCarla, Warning, TEXT("Num runtime virtual texture parameters = %d"), materialInstance->RuntimeVirtualTextureParameterValues.Num());
-      for (const FRuntimeVirtualTextureParameterValue & Parameter : materialInstance->RuntimeVirtualTextureParameterValues){
-	      UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString());
-       }
-      UE_LOG(LogCarla, Warning, TEXT("Num Font parameters = %d"), materialInstance->FontParameterValues.Num());
-      for (const FFontParameterValue & Parameter : materialInstance->FontParameterValues){
-	      UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString());
-       }
+      // UE_LOG(LogCarla, Warning, TEXT("Num scalar parameters = %d"), materialInstance->ScalarParameterValues.Num());
+      // for (const FScalarParameterValue & Parameter : materialInstance->ScalarParameterValues){
+      // 	      float value = Parameter.ParameterValue;
+      // 	      UE_LOG(LogCarla, Warning, TEXT("Param value = %d"), value);
+      // 	      UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString())
+      // }
+      // UE_LOG(LogCarla, Warning, TEXT("Num vector parameters = %d"), materialInstance->VectorParameterValues.Num());
+      // for (const FVectorParameterValue & Parameter : materialInstance->VectorParameterValues){
+      // 	      FLinearColor value = Parameter.ParameterValue;
+      // 	      UE_LOG(LogCarla, Warning, TEXT("Param value (R, G, B, A) = %s"), *value.ToString());
+      //         UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString())
+      //  }
+      // UE_LOG(LogCarla, Warning, TEXT("Num texture parameters = %d"), materialInstance->TextureParameterValues.Num());
+      // for (const FTextureParameterValue & Parameter : materialInstance->TextureParameterValues){
+      //         UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString());
+      //  }
+      // UE_LOG(LogCarla, Warning, TEXT("Num runtime virtual texture parameters = %d"), materialInstance->RuntimeVirtualTextureParameterValues.Num());
+      // for (const FRuntimeVirtualTextureParameterValue & Parameter : materialInstance->RuntimeVirtualTextureParameterValues){
+      //         UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString());
+      //  }
+      // UE_LOG(LogCarla, Warning, TEXT("Num Font parameters = %d"), materialInstance->FontParameterValues.Num());
+      // for (const FFontParameterValue & Parameter : materialInstance->FontParameterValues){
+      //         UE_LOG(LogCarla, Warning, TEXT("Param name = %s"), *Parameter.ParameterInfo.Name.ToString());
+      //  }
       // materialInstance->DumpDebugInfo();
       // UE_LOG(LogCarla, Warning, TEXT("Material = %s"), *material->GetName());
       // ScalarMaterialInput metallic = material->Metallic;
