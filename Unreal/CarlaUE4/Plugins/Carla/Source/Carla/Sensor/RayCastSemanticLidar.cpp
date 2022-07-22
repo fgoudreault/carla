@@ -122,8 +122,10 @@ void ARayCastSemanticLidar::SimulateLidar(const float DeltaTime)
             * idxPtsOneLaser, Description.HorizontalFov) - Description.HorizontalFov / 2;
         const bool PreprocessResult = RayPreprocessCondition[idxChannel][idxPtsOneLaser];
 
-        if (PreprocessResult && ShootLaser(VertAngle, HorizAngle, HitResult, TraceParams)) {
-          WritePointAsync(idxChannel, HitResult);
+        if (PreprocessResult){
+          if (ShootLaser(VertAngle, HorizAngle, HitResult, TraceParams)){
+            WritePointAsync(idxChannel, HitResult);
+          }
         }
       };
     });
