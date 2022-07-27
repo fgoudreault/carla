@@ -42,6 +42,9 @@ public:
 protected:
   virtual void PostPhysTick(UWorld *World, ELevelTick TickType, float DeltaTime) override;
 
+  /// Get color data from UV coordinates
+  void GetColorFromTexture(UTexture2D * texture, const FVector2D uvCoordinates, FColor &color) const;
+
   /// Creates a Laser for each channel.
   void CreateLasers();
 
@@ -56,6 +59,11 @@ protected:
 
   /// Compute all raw detection information
   void ComputeRawDetection(const FHitResult &HitInfo, const FTransform &SensorTransf, FSemanticDetection &Detection) const;
+  void ComputeRawDetectionFromComponent(
+          const FHitResult &HitInfo, FSemanticDetection &Detection, UPrimitiveComponent * Component) const;
+  void ComputeRawDetectionFromMaterialInstance(
+          FSemanticDetection &Detection, UMaterialInstance * materialInstance,
+          UPrimitiveComponent * Component) const;
 
   /// Saving the hits the raycast returns per channel
   void WritePointAsync(uint32_t Channel, FHitResult &Detection);

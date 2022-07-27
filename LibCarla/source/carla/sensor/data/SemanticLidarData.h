@@ -7,6 +7,7 @@
 #pragma once
 
 #include "carla/rpc/Location.h"
+#include "carla/geom/Vector4DuInt.h"
 
 #include <cstdint>
 #include <vector>
@@ -38,12 +39,13 @@ namespace data {
   /// The points are stored in an array of detections, each detection consist in
   /// four floats, the point detected and the angle between the casted ray and
   /// the normal of the hitted object, and two unsigned integers, the index
-  /// and the semantic tag of the hitted object
+  /// and the semantic tag of the hitted object. Also the base color of the texture hit,
+  /// and the occlusion / roughness / Metalicity / Emission values.
   ///
   ///    {
-  ///      X0, Y0, Z0, Cos(TH0), idx_0, tag_0
+  ///      X0, Y0, Z0, Cos(TH0), idx_0, tag_0, R_0, G_0, B_0, A_0, O_0, Roughness_0, M_0, E_0
   ///      ...
-  ///      Xn, Yn, Zn, Cos(THn), idx_n, tag_n
+  ///      Xn, Yn, Zn, Cos(THn), idx_n, tag_n, R_n, G_n, B_n, A_n, O_n, Roughness_n, M_n, E_n
   ///    }
   ///
 
@@ -54,13 +56,20 @@ namespace data {
       float cos_inc_angle{};
       uint32_t object_idx{};
       uint32_t object_tag{};
+      geom::Vector4DuInt base_color{};
+      geom::Vector4DuInt ORME{};
 
       SemanticLidarDetection() = default;
 
-      SemanticLidarDetection(float x, float y, float z, float cosTh, uint32_t idx, uint32_t tag) :
-          point(x, y, z), cos_inc_angle{cosTh}, object_idx{idx}, object_tag{tag} { }
-      SemanticLidarDetection(geom::Location p, float cosTh, uint32_t idx, uint32_t tag) :
-          point(p), cos_inc_angle{cosTh}, object_idx{idx}, object_tag{tag} { }
+      SemanticLidarDetection(float x, float y, float z, float cosTh, uint32_t idx, uint32_t tag,
+		      uint8_t R, uint8_t G, uint8_t B, uint8_t A, uint8_t O, uint8_t Roughness,
+		      uint8_t M, uint8_t E) :
+          point(x, y, z), cos_inc_angle{cosTh}, object_idx{idx}, object_tag{tag},
+          base_color(R, G, B, A), ORME(O, Roughness, M, E) { }
+      SemanticLidarDetection(geom::Location p, float cosTh, uint32_t idx, uint32_t tag,
+		      geom::Vector4DuInt baseColor, geom::Vector4DuInt orme) :
+          point(p), cos_inc_angle{cosTh}, object_idx{idx}, object_tag{tag},
+          base_color(baseColor), ORME(orme) { }
 
       void WritePlyHeaderInfo(std::ostream& out) const{
         out << "property float32 x\n" \
@@ -68,12 +77,23 @@ namespace data {
            "property float32 z\n" \
            "property float32 CosAngle\n" \
            "property uint32 ObjIdx\n" \
-           "property uint32 ObjTag";
+           "property uint32 ObjTag\n"\
+	   "property uint8 R\n"\
+	   "property uint8 G\n"\
+	   "property uint8 B\n"\
+	   "property uint8 A\n"\
+	   "property uint8 O\n"\
+	   "property uint8 Roughness\n"\
+	   "property uint8 M\n"\
+	   "property uint8 E\n";
       }
 
       void WriteDetection(std::ostream& out) const{
         out << point.x << ' ' << point.y << ' ' << point.z << ' ' \
-          << cos_inc_angle << ' ' << object_idx << ' ' << object_tag;
+          << cos_inc_angle << ' ' << object_idx << ' ' << object_tag << ' '\
+	  << base_color.x << ' ' << base_color.y << ' ' << base_color.z << ' '\
+	  << base_color.w << ' ' << ORME.x << ' ' << ORME.y << ' ' << ORME.z << ' '\
+	  << ORME.w;
       }
   };
   #pragma pack(pop)
