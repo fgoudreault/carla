@@ -192,7 +192,7 @@ void ARayCastSemanticLidar::ComputeRawDetection(const FHitResult& HitInfo, const
 {
     // always keep angles
     Detection.point = FVector(HitInfo.TraceEnd.X, HitInfo.TraceEnd.Y, HitInfo.TraceEnd.Z);
-    UE_LOG(LogCarla, Warning, TEXT(" "));
+    // UE_LOG(LogCarla, Warning, TEXT(" "));
     if (HitInfo.bBlockingHit) {
         // now that lidar returns hit angles and distances
         // do not modify the inpact point...
@@ -292,6 +292,9 @@ void ARayCastSemanticLidar::ComputeRawDetectionFromMaterialInstance(
     // auto * parameterValues = &(materialInstance->TextureParameterValues);
     FColor textureColor = FColor(0, 0, 0, 0); 
     UTexture2D * texture;
+    // int * numTextures = &(materialInstance->TextureParameterValues.Num());
+    // int * numScalars = &(materialInstance->ScalarParameterValues.Num());
+    // int * numVectors = &(materialInstance->VectorParameterValues.Num());
     switch (materialInstance->TextureParameterValues.Num()){
         case 0:
             // no textures -> check scalar parameters
@@ -302,16 +305,28 @@ void ARayCastSemanticLidar::ComputeRawDetectionFromMaterialInstance(
                     UE_LOG(LogCarla, Warning, TEXT("material instance = %s"), *materialInstance->GetName());
                     switch (materialInstance->VectorParameterValues.Num()){
                         case 0:
-                            UE_LOG(LogCarla, Warning, TEXT("No parameter values at all!!!"))
-                            // error code 6
-                            Detection.base_color = carla::geom::Vector4DuInt(0, 0, 0, 0);
-                            Detection.ORME = carla::geom::Vector4DuInt(0, 0, 0, 0);
-                            Detection.object_idx = 6;
+                            // check virtual texture parameters
+                            switch (materialInstance->RuntimeVirtualTextureParameterValues.Num()){
+                                case 0:
+                                    UE_LOG(LogCarla, Warning, TEXT("No parameter values at all!!!"))
+                                    // error code 6
+                                    Detection.base_color = carla::geom::Vector4DuInt(0, 0, 0, 0);
+                                    Detection.ORME = carla::geom::Vector4DuInt(0, 0, 0, 0);
+                                    Detection.object_idx = 6;
+                                    break;
+                                default:
+                                    // list them for now
+                                    for (int iparam = 0; iparam < materialInstance->RuntimeVirtualTextureParameterValues.Num(); iparam++){
+                                        UE_LOG(LogCarla, Warning, TEXT(" - %s"), *materialInstance->RuntimeVirtualTextureParameterValues[iparam].ParameterInfo.ToString());
+                                    }
+                                    UE_LOG(LogCarla, Fatal, TEXT("What to do with RVTPVs?"));
+                                    break;
+                            }
                             break;
                         default:
                             // list them for now
-                            for (int iparam = 0; iparam < materialInstance->ScalarParameterValues.Num(); iparam++){
-                                UE_LOG(LogCarla, Warning, TEXT(" - %s"), *materialInstance->ScalarParameterValues[iparam].ParameterInfo.ToString());
+                            for (int iparam = 0; iparam < materialInstance->VectorParameterValues.Num(); iparam++){
+                                UE_LOG(LogCarla, Warning, TEXT(" - %s"), *materialInstance->VectorParameterValues[iparam].ParameterInfo.ToString());
                             }
                             UE_LOG(LogCarla, Fatal, TEXT(" vector parameters..."));
                             // error code 7
@@ -323,23 +338,27 @@ void ARayCastSemanticLidar::ComputeRawDetectionFromMaterialInstance(
                     break;
                 default:
                     // check if first scalar texture is transparency
-                    if (materialInstance->ScalarParameterValues[0].ParameterInfo.Name == "Transparency"){
-                        // store transparency as alpha and all other colors to white I guess...
-                        Detection.ORME = carla::geom::Vector4DuInt(textureColor.R, textureColor.G, textureColor.B, textureColor.A);
-                        uint8_t alpha = static_cast<uint8_t>(materialInstance->ScalarParameterValues[0].ParameterValue * 256);
-                        // the alpha above have 0 -> non transparent -> should have an alpha of 255
-                        Detection.base_color = carla::geom::Vector4DuInt(textureColor.R, textureColor.G, textureColor.B, 255 - alpha);
-                        break;
+                    for (int iparam = 0; iparam < materialInstance->ScalarParameterValues.Num(); iparam++){
+                        if (materialInstance->ScalarParameterValues[iparam].ParameterInfo.Name == "Transparency"){
+                            // store transparency as alpha and all other colors to white I guess...
+                            Detection.ORME = carla::geom::Vector4DuInt(255, 255, 255, 255);
+                            uint8_t alpha = static_cast<uint8_t>(materialInstance->ScalarParameterValues[0].ParameterValue * 255);
+                            // the alpha above have 0 -> non transparent -> should have an alpha of 255
+                            Detection.base_color = carla::geom::Vector4DuInt(textureColor.R, textureColor.G, textureColor.B, 255 - alpha);
+                            break;
+                        }
+                        if (iparam == materialInstance->ScalarParameterValues.Num() - 1){
+                            UE_LOG(LogCarla, Warning, TEXT("transparency not found for material instance = %s. Scalar values are:"), *materialInstance->GetName());
+                            for (int iparam2 = 0; iparam2 < materialInstance->ScalarParameterValues.Num(); iparam2++){
+                                UE_LOG(LogCarla, Warning, TEXT(" - %s"), *materialInstance->ScalarParameterValues[iparam2].ParameterInfo.Name.ToString());
+                            }
+                            // error code 8
+                            Detection.base_color = carla::geom::Vector4DuInt(0, 0, 0, 0);
+                            Detection.ORME = carla::geom::Vector4DuInt(0, 0, 0, 0);
+                            Detection.object_idx = 8;
+                        }
                     }
-                    else{
-                        UE_LOG(LogCarla, Warning, TEXT("material instance = %s"), *materialInstance->GetName());
-                        UE_LOG(LogCarla, Warning, TEXT("first scalar value is not transparency..."));
-                        // error code 8
-                        Detection.base_color = carla::geom::Vector4DuInt(0, 0, 0, 0);
-                        Detection.ORME = carla::geom::Vector4DuInt(0, 0, 0, 0);
-                        Detection.object_idx = 8;
-                        return;
-                    }
+                    break;
             }
             break;
         case 1:  // only base color
@@ -387,27 +406,25 @@ void ARayCastSemanticLidar::GetColorFromTexture(UTexture2D * texture, const FVec
     texture->SRGB = false;
     texture->UpdateResource();
     // now get pixel value
-    FTexture2DMipMap * mipmap = &texture->PlatformData->Mips[0];
-    FByteBulkData * RawImageData = &mipmap->BulkData;
-    FColor* FormatedImageData = reinterpret_cast<FColor*>(RawImageData->Lock(LOCK_READ_ONLY));
+    // FTexture2DMipMap * mipmap = &texture->PlatformData->Mips[0];
+    // FByteBulkData * RawImageData = &mipmap->BulkData;
+    const FColor* FormatedImageData = reinterpret_cast<const FColor*>(texture->PlatformData->Mips[0].BulkData.LockReadOnly());
     if (FormatedImageData == nullptr){
         // https://isaratech.com/ue4-reading-the-pixels-from-a-utexture2d/
         UE_LOG(LogCarla, Fatal, TEXT("Lock returned nullptr..."));
     }
-        uint32 width = mipmap->SizeX;
-        uint32 height = mipmap->SizeY;
-    uint8 PixelX = static_cast<uint8>(roundf(uvCoordinates[0] * width));
-    uint8 PixelY = static_cast<uint8>(roundf(uvCoordinates[1] * height));
-    if (PixelX >= width || PixelY >= height){
+    uint8 PixelX = static_cast<uint8>(roundf(uvCoordinates[0] * texture->PlatformData->Mips[0].SizeX));
+    uint8 PixelY = static_cast<uint8>(roundf(uvCoordinates[1] * texture->PlatformData->Mips[0].SizeY));
+    if (PixelX >= texture->PlatformData->Mips[0].SizeX || PixelY >= texture->PlatformData->Mips[0].SizeY){
         UE_LOG(LogCarla, Fatal, TEXT("Overflow UV coordinates..."));
     }
     if (PixelX >= 0 && PixelY >= 0){
-        color = FormatedImageData[PixelY * width + PixelX];
+        color = FormatedImageData[PixelY * texture->PlatformData->Mips[0].SizeX + PixelX];
     }
     else{
         UE_LOG(LogCarla, Fatal, TEXT("Pixel coordinates invalid..."));
     }
-    RawImageData->Unlock();
+    texture->PlatformData->Mips[0].BulkData.Unlock();
     // return previous settings
     texture->CompressionSettings = OldCompressionSettings;
 #if WITH_EDITORONLY_DATA
